@@ -19,20 +19,29 @@ public class ASA implements Parser{
 
     @Override
     public boolean parse(){
-        int band=0;
+        int reduccion = 0;
         Stack pila=new Stack();
-        setTerminales();
 
         pila.push(0);
 
         while(i < tokens.size()){
             if(pila.peek().equals(0)){
-                if(preanalisis.tipo == TipoToken.SELECT){
-                    pila.push(2);
-                    next();
+                if(reduccion != 0){
+                    if(reduccion == 1) pila.push(1);
+                    else {
+                        System.out.println("Error en la reducción del estado 0");
+                        return false;
+                    }
+
+                    reduccion = 0;
                 } else {
-                    System.out.println("ERROR ENCONTRADO: Se esperaba 'select'");
-                    return false;
+                    if(preanalisis.tipo == TipoToken.SELECT){
+                        pila.push(2);
+                        next();
+                    } else {
+                        System.out.println("ERROR ENCONTRADO: Se esperaba 'select'");
+                        return false;
+                    }
                 }
             } else if(pila.peek().equals(1)){
                 if(preanalisis.tipo == TipoToken.EOF){
@@ -43,18 +52,31 @@ public class ASA implements Parser{
                     return false;
                 }
             } else if(pila.peek().equals(2)){
-                if(preanalisis.tipo == TipoToken.DISTINCT){
-                    pila.push(4);
-                    next();
-                } else if(preanalisis.tipo == TipoToken.ASTERISCO){
-                    pila.push(6);
-                    next();
-                } else if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                    pila.push(9);
-                    next();
+                if(reduccion != 0){
+                    if(reduccion == 2) pila.push(3);
+                    else if(reduccion == 3) pila.push(5);
+                    else if(reduccion == 4) pila.push(7);
+                    else if(reduccion == 5) pila.push(8);
+                    else {
+                        System.out.println("Error en la reducción del estado 2");
+                        return false;
+                    }
+
+                    reduccion = 0;
                 } else {
-                    System.out.println("ERROR ENCONTRADO: Se esperaba 'distinct'. '*' o 'id'");
-                    return false;
+                    if(preanalisis.tipo == TipoToken.DISTINCT){
+                        pila.push(4);
+                        next();
+                    } else if(preanalisis.tipo == TipoToken.ASTERISCO){
+                        pila.push(6);
+                        next();
+                    } else if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
+                        pila.push(9);
+                        next();
+                    } else {
+                        System.out.println("ERROR ENCONTRADO: Se esperaba 'distinct', '*' o 'id'");
+                        return false;
+                    }
                 }
             } else if(pila.peek().equals(3)){
                 if(preanalisis.tipo == TipoToken.FROM){
@@ -65,140 +87,240 @@ public class ASA implements Parser{
                     return false;
                 }
             } else if(pila.peek().equals(4)){
-                if(preanalisis.tipo == TipoToken.FROM){
-                    pila.push(10);
-                    next();
-                }
-            }
-            Iterator<TipoToken> iter = terminales.iterator();
-            while (iter.hasNext()){
-                if(pila.peek() == iter.next()) band = 1;
-            }
-
-            if(pila.peek() == TipoToken.EOF){
-                System.out.println("Consulta correcta");
-                return true;
-            }
-
-            if(band == 1){
-                match((TipoToken) pila.peek());
-                if(hayErrores) return false;
-                pila.pop();
-                band = 0;
-            } else {
-                if(pila.peek() == "Q"){
-                    if(preanalisis.tipo == TipoToken.SELECT){
-                        pila.pop();
-                        pila.push("T");
-                        pila.push(TipoToken.FROM);
-                        pila.push("D");
-                        pila.push(TipoToken.SELECT);
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'select'");
+                if(reduccion != 0){
+                    if(reduccion == 3) pila.push(11);
+                    else if(reduccion == 4) pila.push(7);
+                    else if(reduccion == 5) pila.push(8);
+                    else {
+                        System.out.println("Error en la reducción del estado 4");
                         return false;
                     }
-                } else if(pila.peek() == "D"){
-                    if(preanalisis.tipo == TipoToken.DISTINCT){
-                        pila.pop();
-                        pila.push("P");
-                        pila.push(TipoToken.DISTINCT);
-                    } else if(preanalisis.tipo == TipoToken.ASTERISCO || preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("P");
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'distinct', '*' o 'identificador'");
-                        return false;
-                    }
-                } else if(pila.peek() == "P"){
+
+                    reduccion = 0;
+                } else {
                     if(preanalisis.tipo == TipoToken.ASTERISCO){
-                        pila.pop();
-                        pila.push(TipoToken.ASTERISCO);
+                        pila.push(6);
+                        next();
                     } else if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("A");
+                        pila.push(9);
+                        next();
                     } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba '*' o 'identificador'");
+                        System.out.println("ERROR ENCONTRADO: Se esperaba '*' o 'id'");
                         return false;
                     }
-                } else if(pila.peek() == "A"){
-                    if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("A1");
-                        pila.push("A2");
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'identificador'");
+                }
+            } else if(pila.peek().equals(5)){
+                if(preanalisis.tipo == TipoToken.FROM){
+                    pila.pop();
+                    reduccion = 2;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from'");
+                    return false;
+                }
+            } else if(pila.peek().equals(6)){
+                if(preanalisis.tipo == TipoToken.FROM){
+                    pila.pop();
+                    reduccion = 3;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from'");
+                    return false;
+                }
+            } else if(pila.peek().equals(7)){
+                if(preanalisis.tipo == TipoToken.FROM){
+                    pila.pop();
+                    reduccion = 3;
+                } else if(preanalisis.tipo == TipoToken.COMA){
+                    pila.push(12);
+                    next();
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from' o ','");
+                    return false;
+                }
+            } else if(pila.peek().equals(8)){
+                if(preanalisis.tipo == TipoToken.FROM || preanalisis.tipo == TipoToken.COMA){
+                    pila.pop();
+                    reduccion = 4;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from' o ','");
+                    return false;
+                }
+            } else if(pila.peek().equals(9)){
+                if(reduccion != 0){
+                    if(reduccion == 6) pila.push(13);
+                    else {
+                        System.out.println("Error en la reducción del estado 9");
                         return false;
                     }
-                } else if(pila.peek() == "A1"){
-                    if(preanalisis.tipo == TipoToken.COMA){
-                        pila.pop();
-                        pila.push("A");
-                        pila.push(TipoToken.COMA);
-                    } else if(preanalisis.tipo == TipoToken.FROM){
-                        pila.pop();
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba ',' o 'from'");
-                        return false;
-                    }
-                } else if(pila.peek() == "A2"){
-                    if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("A3");
-                        pila.push(TipoToken.IDENTIFICADOR);
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'identificador'");
-                        return false;
-                    }
-                } else if(pila.peek() == "A3"){
-                    if(preanalisis.tipo == TipoToken.PUNTO){
-                        pila.pop();
-                        pila.push(TipoToken.IDENTIFICADOR);
-                        pila.push(TipoToken.PUNTO);
-                    } else if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.FROM){
-                        pila.pop();
+
+                    reduccion = 0;
+                } else {
+                    if(preanalisis.tipo == TipoToken.FROM || preanalisis.tipo == TipoToken.COMA){
+                        reduccion = 6;
+                    } else if(preanalisis.tipo == TipoToken.PUNTO){
+                        pila.push(14);
+                        next();
                     } else {
                         System.out.println("ERROR ENCONTRADO: Se esperaba 'from', ',' o '.'");
                         return false;
                     }
-                } else if(pila.peek() == "T"){
+                }
+            } else if(pila.peek().equals(10)){
+                if(reduccion != 0){
+                    if(reduccion == 7) pila.push(15);
+                    else if(reduccion == 8) pila.push(16);
+                    else {
+                        System.out.println("Error en la reducción del estado 10");
+                        return false;
+                    }
+
+                    reduccion = 0;
+                } else {
                     if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("T1");
-                        pila.push("T2");
+                        pila.push(17);
+                        next();
                     } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'identificador'");
+                        System.out.println("ERROR ENCONTRADO: Se esperaba 'id'");
                         return false;
                     }
-                } else if(pila.peek() == "T1"){
-                    if(preanalisis.tipo == TipoToken.COMA){
-                        pila.pop();
-                        pila.push("T");
-                        pila.push(TipoToken.COMA);
-                    } else if(preanalisis.tipo == TipoToken.EOF){
-                        pila.pop();
-                    } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba ',' o 'EOF'");
+                }
+            } else if(pila.peek().equals(11)){
+                if(preanalisis.tipo == TipoToken.FROM){
+                    pila.pop(); pila.pop();
+                    reduccion = 2;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from'");
+                    return false;
+                }
+            } else if(pila.peek().equals(12)){
+                if(reduccion != 0){
+                    if(reduccion == 5) pila.push(18);
+                    else {
+                        System.out.println("Error en la reducción del estado 12");
                         return false;
                     }
-                } else if(pila.peek() == "T2"){
+
+                    reduccion = 0;
+                } else {
                     if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push("T3");
-                        pila.push(TipoToken.IDENTIFICADOR);
+                        pila.push(9);
+                        next();
                     } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba 'identificador'");
+                        System.out.println("ERROR ENCONTRADO: Se esperaba 'id'");
                         return false;
                     }
-                } else if(pila.peek() == "T3"){
+                }
+            } else if(pila.peek().equals(13)){
+                if(preanalisis.tipo == TipoToken.FROM || preanalisis.tipo == TipoToken.COMA){
+                    pila.pop(); pila.pop();
+                    reduccion = 5;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from' o ','");
+                    return false;
+                }
+            } else if(pila.peek().equals(14)){
+                if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
+                    pila.push(19);
+                    next();
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'id'");
+                    return false;
+                }
+            } else if(pila.peek().equals(15)){
+                if(preanalisis.tipo == TipoToken.COMA){
+                    pila.push(20);
+                    next();
+                } else if(preanalisis.tipo == TipoToken.EOF){
+                    pila.pop(); pila.pop(); pila.pop(); pila.pop();
+                    reduccion = 1;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba ',' o '$'");
+                    return false;
+                }
+            } else if(pila.peek().equals(16)){
+                if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
+                    pila.pop();
+                    reduccion = 7;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba ',' o '$'");
+                    return false;
+                }
+            } else if(pila.peek().equals(17)){
+                if(reduccion != 0){
+                    if(reduccion == 9) pila.push(21);
+                    else {
+                        System.out.println("Error en la reducción del estado 17");
+                        return false;
+                    }
+
+                    reduccion = 0;
+                } else {
+                    if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
+                        reduccion = 9;
+                    } else if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
+                        pila.push(22);
+                        next();
+                    } else {
+                        System.out.println("ERROR ENCONTRADO: Se esperaba ',', 'id' o '$'");
+                        return false;
+                    }
+                }
+            } else if(pila.peek().equals(18)){
+                if(preanalisis.tipo == TipoToken.FROM || preanalisis.tipo == TipoToken.COMA){
+                    pila.pop(); pila.pop(); pila.pop();
+                    reduccion = 4;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from' o ','");
+                    return false;
+                }
+            } else if(pila.peek().equals(19)){
+                if(preanalisis.tipo == TipoToken.FROM || preanalisis.tipo == TipoToken.COMA){
+                    pila.pop(); pila.pop();
+                    reduccion = 6;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba 'from' o ','");
+                    return false;
+                }
+            } else if(pila.peek().equals(20)){
+                if(reduccion != 0){
+                    if(reduccion == 8) pila.push(23);
+                    else {
+                        System.out.println("Error en la reducción del estado 20");
+                        return false;
+                    }
+
+                    reduccion = 0;
+                } else {
                     if(preanalisis.tipo == TipoToken.IDENTIFICADOR){
-                        pila.pop();
-                        pila.push(TipoToken.IDENTIFICADOR);
-                    } else if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
-                        pila.pop();
+                        pila.push(17);
+                        next();
                     } else {
-                        System.out.println("ERROR ENCONTRADO: Se esperaba ',', 'identificador' o 'EOF'");
+                        System.out.println("ERROR ENCONTRADO: Se esperaba 'id'");
                         return false;
                     }
+                }
+            } else if(pila.peek().equals(21)){
+                if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
+                    pila.pop(); pila.pop();
+                    reduccion = 8;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba ',' o '$'");
+                    return false;
+                }
+            } else if(pila.peek().equals(22)){
+                if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
+                    pila.pop();
+                    reduccion = 9;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba ',' o '$'");
+                    return false;
+                }
+            } else if(pila.peek().equals(23)){
+                if(preanalisis.tipo == TipoToken.COMA || preanalisis.tipo == TipoToken.EOF){
+                    pila.pop(); pila.pop(); pila.pop();
+                    reduccion = 7;
+                } else {
+                    System.out.println("ERROR ENCONTRADO: Se esperaba ',' o '$'");
+                    return false;
                 }
             }
         }
@@ -206,30 +328,8 @@ public class ASA implements Parser{
         return false;
     }
 
-    private void match(TipoToken tt){
-        if(preanalisis.tipo == tt){
-            i++;
-            preanalisis = tokens.get(i);
-        }
-        else{
-            hayErrores = true;
-            System.out.println("ERROR IDENTIFICADO: Se esperaba " + tt);
-        }
-
-    }
-
     private void next(){
         i++;
         preanalisis = tokens.get(i);
-    }
-
-    private void setTerminales(){
-        terminales.add(TipoToken.SELECT);
-        terminales.add(TipoToken.FROM);
-        terminales.add(TipoToken.DISTINCT);
-        terminales.add(TipoToken.ASTERISCO);
-        terminales.add(TipoToken.COMA);
-        terminales.add(TipoToken.IDENTIFICADOR);
-        terminales.add(TipoToken.PUNTO);
     }
 }
